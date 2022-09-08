@@ -20,8 +20,17 @@ import { menuController,
 import { writeTablesController, 
     readTablesController,
     readTablesControllerByID,
+    updateTablesController,
     deleteTablesControllerByID
 } from '../sql/tables/tablesController.js'
+
+//import groups
+import { writeGroupsController, 
+    readGroupsController,
+    readGroupsControllerByID,
+    updateGroupsController,
+    deleteGroupsControllerByID
+} from '../sql/queue/queueController.js'
 
 const router = express.Router();
 
@@ -44,6 +53,16 @@ router.delete('/menu', deleteMenuByIDController)
 router.get('/tables', readTablesController)
 router.get('/tables/:id', readTablesControllerByID)
 router.post('/createTable', writeTablesController)
+router.put('/updateTable/:id', updateTablesController)
 router.delete('deleteTable/:id', deleteTablesControllerByID)
+
+
+//groups router
+router.get('/groups', readGroupsController)
+router.get('/groups/:id', readGroupsControllerByID)
+router.post('/createGroup', writeGroupsController)
+router.put('/updateGroup/:id', updateGroupsController)
+router.delete('deleteGroup/:id', deleteGroupsControllerByID)
+
 
 export default router 
