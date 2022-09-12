@@ -62,7 +62,7 @@ export const readDb = (res, id) => {
 }
 
 export const readDbByID = (res, id) => {
-        db.query(`SELECT * FROM Restauranttable where id = '${id}'`, (err, result) => {
+        db.query(`SELECT * FROM tables where id = '${id}'`, (err, result) => {
             if (err) throw err;
             console.log(result);
             return res.send(result)

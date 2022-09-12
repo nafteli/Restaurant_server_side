@@ -1,10 +1,18 @@
-import { createGroup, readGroups, readGroupByID, deleteGroupByID, updateGroup } from './queue.js'
+import {
+    createGroup,
+    readGroups,
+    readGroupByID,
+    deleteGroupByID,
+    updateGroup,
+    sitGroupByID,
+    sitGroup
+} from './queue.js'
 
 export const writeGroupsController = (req, res) => {
     const data = req.body;
     console.log(data)
     try {
-        createGroup( data, res)
+        createGroup(data, res)
     } catch (error) {
         console.error(error);
         res.sendStatus(500)
@@ -23,9 +31,9 @@ export const readGroupsController = (req, res) => {
 }
 
 export const readGroupsControllerByID = (req, res) => {
-    console.log(req.params.id)
+    let id = req.params.id
     try {
-        readGroupByID(res ,req.params.id)
+        readGroupByID(res, id)
     } catch (error) {
         console.error(error);
         return res.sendStatus(500)
@@ -36,7 +44,7 @@ export const readGroupsControllerByID = (req, res) => {
 export const deleteGroupsControllerByID = (req, res) => {
     console.log(req.params.id)
     try {
-        deleteGroupByID(res ,req.params.id)
+        deleteGroupByID(res, req.params.id)
     } catch (error) {
         console.error(error);
         return res.sendStatus(500)
@@ -45,10 +53,11 @@ export const deleteGroupsControllerByID = (req, res) => {
 }
 
 export const updateGroupsController = (req, res) => {
-    console.log(req.params.id)
-    const data = Date.now()
+    let id = req.params.id
+    console.log(typeof (id))
+    let data = req.body
     try {
-        updateGroup(res, req.params.id, data)
+        updateGroup(res, id, data)
     } catch (error) {
         console.error(error);
         return res.sendStatus(500)
@@ -56,4 +65,22 @@ export const updateGroupsController = (req, res) => {
     }
 }
 
+export const sitGroupByIDController = (req, res) => {
+    try {
+        sitGroupByID(req, res)
+    } catch (error) {
+        console.error(error);
+        return res.sendStatus(500)
 
+    }
+}
+
+export const sitGroupController = (req, res) => {
+    try {
+        sitGroup(req, res)
+    } catch (error) {
+        console.error(error);
+        return res.sendStatus(500)
+
+    }
+}

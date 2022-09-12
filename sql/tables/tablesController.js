@@ -2,6 +2,7 @@ import { createTable, readTable, readTableByID, deleteTableByID, updateTable } f
 
 export const writeTablesController = (req, res) => {
     const data = req.body;
+    console.log(data)
     try {
         createTable( data, res)
     } catch (error) {
@@ -22,9 +23,11 @@ export const readTablesController = (req, res) => {
 }
 
 export const readTablesControllerByID = (req, res) => {
-    console.log(req.params.id)
+    let id = req.params.id
+    console.log(id==Number)
+    console.log(typeof id)
     try {
-        readTableByID(res ,req.params.id)
+        readTableByID(res ,id)
     } catch (error) {
         console.error(error);
         return res.sendStatus(500)
@@ -45,7 +48,8 @@ export const deleteTablesControllerByID = (req, res) => {
 
 export const updateTablesController = (req, res) => {
     console.log(req.params.id)
-    const data = Date.now()
+    const data = req.body
+    console.log(data)
     try {
         updateTable(res, req.params.id, data)
     } catch (error) {
