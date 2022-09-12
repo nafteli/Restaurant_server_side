@@ -31,30 +31,20 @@ export const createGroup = (data, res) => {
     });
 }
 
-export const readGroups = (res, id) => {
-    if (id) {
-        db.query(`SELECT * FROM queue where id = '${id}'`, (err, result) => {
-            if (err) throw err;
-            console.log(result);
-            return res.send(result)
-        });
-    }
-    else {
-        db.query(`SELECT * FROM queue`, (err, result) => {
-            if (err) throw err;
-            console.log(result);
-            return res.send(result)
-        });
-    }
+export const readGroups = (res) => {
+    db.query(`SELECT * FROM queue`, (err, result) => {
+        if (err) throw err;
+        console.log(result.length);
+        res.send(result)
+    });
 }
 
-export const readGroupByID = (res, id, result1) => {
-    console.log(result1)
+export const readGroupByID = (res, id) => {
     if (id == "AwaitSit" || id == "AwaitService" || id == "AwaitBill") {
         db.query(`SELECT * FROM queue where queue = '${id}'`, (err, result) => {
             if (err) throw err;
             console.log("result:", result);
-            return res.send(result)
+            res.send(result)
         });
     }
     else {
@@ -62,7 +52,7 @@ export const readGroupByID = (res, id, result1) => {
             if (err) throw err;
             res.send(result)
             //console.log("result:", result);
-            return result
+            // return result
         });
     }
 }
@@ -72,7 +62,7 @@ export const deleteGroupByID = (res, id) => {
     db.query(`DELETE FROM queue where id = '${id}'`, (err, result) => {
         if (err) throw err;
         console.log(result);
-        return res.send(result)
+        res.send(result)
     });
 }
 
@@ -86,8 +76,7 @@ export const updateGroup = (res, id, data) => {
     });
 }
 
-export const sitGroupByID = (req, res) => {
-    let id = req.params.id
+export const sitGroupByID = (res, id) => {
     let queueData;
     let tableData;
     //let sql = `INSERT INTO queue (gropeTable) select (name) from tables `
@@ -106,8 +95,9 @@ export const sitGroupByID = (req, res) => {
 
                 tableData = result[0]
                 if (tableData) {
-                    if (queueData["gropeTable"] != null) { 
-                        res.status(400).send(`This group is already sitting at the table: ${queueData["gropeTable"]}`) }
+                    if (queueData["gropeTable"] !== null || queueData["gropeTable"] !== undefined) {
+                        res.status(400).send(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
+                    }
                     else {
                         let tableDataId = tableData["id"]
                         console.log(tableDataId)
@@ -142,8 +132,17 @@ export const sitGroupByID = (req, res) => {
 
 }
 
-export const sitGroup = (req, res) => {
-
+export const sitGroups = (req, res) => {
+    db.query(`SELECT * FROM queue`, (err, result) => {
+        if (err) throw err;
+        // for (let i = 0; i < result.length; i++){
+        //     //console.log(i)
+        //     console.log(result[i]);
+        //     //sitGroupByID(res, result[i]["id"])
+        // }
+        // sitGroupByID(res, 2)
+        // res.sendStatus(200)
+    });
 }
 
 

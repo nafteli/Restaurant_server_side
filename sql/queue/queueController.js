@@ -5,7 +5,7 @@ import {
     deleteGroupByID,
     updateGroup,
     sitGroupByID,
-    sitGroup
+    sitGroups
 } from './queue.js'
 
 export const writeGroupsController = (req, res) => {
@@ -31,6 +31,7 @@ export const readGroupsController = (req, res) => {
 }
 
 export const readGroupsControllerByID = (req, res) => {
+    console.log(typeof req.params,req.params )
     let id = req.params.id
     try {
         readGroupByID(res, id)
@@ -66,8 +67,9 @@ export const updateGroupsController = (req, res) => {
 }
 
 export const sitGroupByIDController = (req, res) => {
+    let id = req.params.id
     try {
-        sitGroupByID(req, res)
+        sitGroupByID(res, id)
     } catch (error) {
         console.error(error);
         return res.sendStatus(500)
@@ -75,9 +77,9 @@ export const sitGroupByIDController = (req, res) => {
     }
 }
 
-export const sitGroupController = (req, res) => {
+export const sitGroupsController = (req, res) => {
     try {
-        sitGroup(req, res)
+        sitGroups(req, res)
     } catch (error) {
         console.error(error);
         return res.sendStatus(500)
