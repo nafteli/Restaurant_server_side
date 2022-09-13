@@ -55,7 +55,6 @@ export const deleteGroupsControllerByID = (req, res) => {
 
 export const updateGroupsController = (req, res) => {
     let id = req.params.id
-    console.log(typeof (id))
     let data = req.body
     try {
         updateGroup(res, id, data)
