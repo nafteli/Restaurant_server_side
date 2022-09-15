@@ -5,12 +5,12 @@ import {
     deleteGroupByID,
     updateGroup,
     sitGroupByID,
-    sitGroups
+    sitGroups,
+    beyondPayment
 } from './queue.js'
 
 export const writeGroupsController = (req, res) => {
-    const data = req.body;
-    console.log(data)
+    const data = req.body
     try {
         createGroup(data, res)
     } catch (error) {
@@ -79,6 +79,16 @@ export const sitGroupByIDController = (req, res) => {
 export const sitGroupsController = (req, res) => {
     try {
         sitGroups(req, res)
+    } catch (error) {
+        console.error(error);
+        return res.sendStatus(500)
+
+    }
+}
+
+export const beyondPaymentController = (req, res) => {
+    try {
+        beyondPayment(req, res)
     } catch (error) {
         console.error(error);
         return res.sendStatus(500)

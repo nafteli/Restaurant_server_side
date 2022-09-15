@@ -31,7 +31,8 @@ import { writeGroupsController,
     updateGroupsController,
     deleteGroupsControllerByID,
     sitGroupByIDController,
-    sitGroupsController
+    sitGroupsController,
+    beyondPaymentController
 } from '../sql/queue/queueController.js'
 
 const router = express.Router();
@@ -60,12 +61,13 @@ router.delete('/deleteTable/:id', deleteTablesControllerByID)
 
 
 //groups router
+router.post('/createGroup', writeGroupsController)
 router.get('/groups', readGroupsController)
 router.get('/groups/:id', readGroupsControllerByID)
-router.post('/createGroup', writeGroupsController)
-router.put('/updateGroup/:id', updateGroupsController)
 router.put('/sitGroup/:id',sitGroupByIDController)
 router.put('/sitGroups', sitGroupsController)
+router.put('/updateGroup/:id', updateGroupsController)
+router.put('/beyondPayment/:id', beyondPaymentController)
 router.delete('/deleteGroup/:id', deleteGroupsControllerByID)
 
 
