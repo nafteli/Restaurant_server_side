@@ -19,23 +19,20 @@ db.connect(err => {
 });
 
 
-export const idCheck = (res, id, table) => {
-    let checkId = `SELECT * FROM ${table} WHERE id = ${id}`
-    const checed = () => {
-        db.query(checkId, (err, resultCheckGroup) => {
-            if (err) throw err
-            //id check
-            if (resultCheckGroup.length === 0) {
-                //console.log(`There is no group with the id: ${id}`)
-                // res.status(400).send(`There is no group with the id: ${id}`)
-                return "falmbekgfiuse"
-            }
-            return "truecebkf"
-        })
-        //return "niorgh84hf984hg98"
-    }
-    return checed
-}
+// export const idCheck = (res, id, table, callback) => {
+//     let checkId = `SELECT * FROM ${table} WHERE id = ${id}`
+//     console.log(checkId)
+//     db.query(checkId, (err, resultCheckGroup) => {
+//         if (err) throw err
+//         //id check
+//         if (resultCheckGroup.length === 0) {
+//             console.log(`There is no group with the id: ${id}`)
+//             // res.status(400).send(`There is no group with the id: ${id}`)
+//             return callback(resultCheckGroup.length === 0)
+//         }
+//     })
+// }
+
 export const createGroup = (data, res) => {
     if (!Object.hasOwn(data, "name") || !Object.hasOwn(data, "size")) {
         console.log(`The information received is incorrect ${JSON.stringify(data)}`)
@@ -56,7 +53,7 @@ export const createGroup = (data, res) => {
 }
 
 export const readGroups = (res) => {
-    db.query(`SELECT * FROM queue`, (err, result) => {
+    db.query(`SELECT * FROM queue ORDER BY size ASC, GroupSeqNo ASC`, (err, result) => {
         if (err) throw err
         res.send(result)
     });
@@ -115,6 +112,8 @@ export const deleteGroupByID = (res, id) => {
 
 export const updateGroup = (res, id, data) => {
     let checkGroup = `SELECT * FROM queue WHERE id = ${id}`
+    console.log(checkGroup)
+    let getMenuToCheckDishes = `SELECT * FROM menu`
     db.query(checkGroup, (err, resultCheckGroup) => {
         if (err) throw err
         //id check
@@ -132,63 +131,83 @@ export const updateGroup = (res, id, data) => {
         }
 
         //Checking information coming from the client
-        for (let [key, value] of Object.entries(data.dishes)) {
-            if (typeof value != "number") {
-                console.log(`Non-numeric values cannot be updated ${value} is not number it ${typeof value}`)
-                res.status(403).send(`Non-numeric values cannot be updated ${value} is not number it ${typeof value}`)
-                return;
+        let totalPrice = 0
+        db.query(getMenuToCheckDishes, (err, menuResult) => {
+            if (err) return err
+            for (let [key, value] of Object.entries(data.dishes)) {
+                if (key > menuResult.length) {
+                    console.log(`Dish ${key} does not exist`)
+                    res.status(403).send(`Dish ${key} does not exist`)
+                    return;
+                }
+                if (typeof value != "number") {
+                    console.log(`Non-numeric values cannot be updated ${value} is not number it ${typeof value}`)
+                    res.status(403).send(`Non-numeric values cannot be updated ${value} is not number it ${typeof value}`)
+                    return;
+                }
+                if (value < 0) {
+                    console.log(value, "< 0")
+                    res.status(403).send(`It is not possible to update minus portions`)
+                    return;
+                }
+                if (value % 1 !== 0) {
+                    console.log(value, "Incomplete numbers cannot be updated")
+                    res.status(403).send("Incomplete numbers cannot be updated")
+                    return;
+                }
+                totalPrice = totalPrice + menuResult[key]["price"] * value
             }
-            if (value < 0) {
-                console.log(value, "< 0")
-                res.status(403).send(`It is not possible to update minus portions`)
-                return;
-            }
-            if (value % 1 !== 0) {
-                console.log(value, "Incomplete numbers cannot be updated")
-                res.status(403).send("Incomplete numbers cannot be updated")
-                return;
-            }
-        }
-        //check Equality between object
-        if (groupToUpdate["dishes"] != null) {
-            const json = JSON.parse(groupToUpdate["dishes"])
-            const assign = Object.assign({}, json, data.dishes)
-            for (let key of Object.keys(assign)) {
-                if (json[key] > assign[key]) {
-                    console.log(`An existing order cannot be reduced\n ${json[key]} > ${assign[key]}`)
-                    res.status(403).send(`An existing order cannot be reduced`)
-                    return
+
+            //check Equality between object
+            if (groupToUpdate["dishes"] != null) {
+                const json = JSON.parse(groupToUpdate["dishes"])
+                const assign = Object.assign({}, json, data.dishes)
+                totalPrice = 0
+                for (let [key, value] of Object.entries(assign)) {
+                    totalPrice = totalPrice + menuResult[key]["price"] * value
+                    if (json[key] > assign[key]) {
+                        console.log(`An existing order cannot be reduced\n ${json[key]} > ${assign[key]}`)
+                        res.status(403).send(`An existing order cannot be reduced`)
+                        return
+                    }
                 }
             }
-        }
-        //######i need to check if the dish exists before updating #####
-        console.log("i need to check if the dish exists before updating")
-        let dataToUpdate = `UPDATE queue SET dishes = '${JSON.stringify(data.dishes) || groupToUpdate["dishes"]}' WHERE id = '${id}'`;
-        db.query(dataToUpdate, (err, resultUpdating) => {
-            if (err) throw err;
-            console.log(resultUpdating);
-            res.send(resultUpdating)
-            return
-        });
+            let dataToUpdate = `UPDATE queue SET dishes = '${JSON.stringify(data.dishes) || groupToUpdate["dishes"]}', price = ${totalPrice} WHERE id = '${id}'`;
+            db.query(dataToUpdate, (err, resultUpdating) => {
+                if (err) throw err;
+                console.log(`${groupToUpdate["name"]}'s invitation was successfully received, payable by now: ${totalPrice}`)
+                res.send(`${groupToUpdate["name"]}'s invitation was successfully received, payable by now: ${totalPrice}`)
+                return
+            });
+        })
     })
 }
 
 
-//i need to check the general price to pay
-//i need to check if the dish exists before updating
 export const beyondPayment = (req, res) => {
-    console.log(`i need to check the general price to pay\n
-    i need to check if the dish exists before updating`)
     let id = req.params.id
-    let dataToUpdate = `UPDATE queue SET dishes = '{"0":0}', queue = "AwaitBill" WHERE id = '${id}'`;
-    db.query(dataToUpdate, (err, result) => {
-        if (err) throw err;
-        res.sendStatus(200)
-        return;
-    });
+    let totalPay = `SELECT * FROM queue WHERE id = ${id}`
+    db.query(totalPay, (err, resultTotalPay) => {
+        if (err) throw err
+        if (resultTotalPay.length === 0) {
+            console.log(`There is no group with the id: ${id}`)
+            res.status(400).send(`There is no group with the id: ${id}`)
+            return;
+        }
+        let dataToUpdate = `UPDATE queue SET dishes = '{"0":0}', queue = "AwaitBill" WHERE id = '${id}'`
+        db.query(totalPay, (err, peyResult) => {
+            if (err) throw err
+            db.query(dataToUpdate, (err, result) => {
+                if (err) throw err;
+                console.log(`total payment for group ${resultTotalPay[0]["name"]} is: ${peyResult[0]["price"]}`)
+                res.send(`total payment for group ${resultTotalPay[0]["name"]} is: ${peyResult[0]["price"]}`)
+                return;
+            });
+        })
+    })
 }
 
-export const sitGroupByID = (res, id) => {
+export const sitGroupByID = (res, id, demoSize) => {
     let queueData;
     let tableData;
     db.query(`SELECT * FROM queue WHERE id = ${id}`, (err, resultQueue) => {
@@ -204,7 +223,7 @@ export const sitGroupByID = (res, id) => {
             res.status(400).send(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
             return
         }
-        db.query(`SELECT * FROM tables WHERE capacity = ${queueData["size"]} AND GroupSeqNum = 0`, (err, resultTables) => {
+        db.query(`SELECT * FROM tables WHERE capacity = ${queueData["size"] || demoSize} AND GroupSeqNum = 0`, (err, resultTables) => {
             if (err) throw err
             tableData = resultTables[0]
             if (!tableData) {
@@ -221,6 +240,7 @@ export const sitGroupByID = (res, id) => {
                     console.log(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
                     if (err) throw err
                     res.status(200).send(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
+                    return
                 })
             })
         })
@@ -229,15 +249,24 @@ export const sitGroupByID = (res, id) => {
 }
 
 export const sitGroups = (req, res) => {
-    db.query(`SELECT * FROM queue`, (err, result) => {
-        if (err) throw err;
-        for (let i = 0; i < result.length; i++) {
-            //console.log(i)
-            console.log(result[i]["id"]);
-            sitGroupByID(res, result[i]["id"])
-        }
-        // sitGroupByID(res, 2)
-        res.sendStatus(200)
-    });
+    // let queue = `SELECT * FROM queue WHERE queue = "AwaitSit" AND size = 12`
+    // db.query(queue, (err, resultQueue) => {
+    //     // console.log(resultQueue)
+    //     for (let [queueKey, queueValue] of Object.entries(resultQueue)){
+    //         console.log("queueKey:",queueKey)
+    //         let tables = `SELECT * FROM tables WHERE GroupSeqNum = 0`
+    //         db.query(tables, (err, resultTables) => {
+    //             // console.log(resultTables)
+    //             for (let [tablesKey, tablesValue] of Object.entries(resultTables)){
+    //                 // console.log(tablesKey, tablesValue["capacity"])
+    //                 if (tablesValue["capacity"] >= queueValue["size"]){
+    //                     console.log(resultTables[tablesKey], resultQueue[queueKey])
+    //                     break
+    //                 }
+    //             }
+    //         })
+    //     }
+    // })
+    res.sendStatus(200)
 }
 

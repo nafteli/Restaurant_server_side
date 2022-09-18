@@ -31,7 +31,6 @@ export const readGroupsController = (req, res) => {
 }
 
 export const readGroupsControllerByID = (req, res) => {
-    console.log(typeof req.params,req.params )
     let id = req.params.id
     try {
         readGroupByID(res, id)
