@@ -1,6 +1,5 @@
 import {
     createGroup,
-    readGroups,
     readGroupByID,
     deleteGroupByID,
     updateGroup,
@@ -20,20 +19,11 @@ export const writeGroupsController = (req, res) => {
     }
 }
 
-export const readGroupsController = (req, res) => {
-    try {
-        readGroups(res)
-    } catch (error) {
-        console.error(error);
-        return res.sendStatus(500)
-
-    }
-}
 
 export const readGroupsControllerByID = (req, res) => {
     let id = req.params.id
     try {
-        readGroupByID(res, id)
+        readGroupByID(id, res)
     } catch (error) {
         console.error(error);
         return res.sendStatus(500)

@@ -25,8 +25,7 @@ import { writeTablesController,
 } from '../sql/tables/tablesController.js'
 
 //import groups
-import { writeGroupsController, 
-    readGroupsController,
+import { writeGroupsController,
     readGroupsControllerByID,
     updateGroupsController,
     deleteGroupsControllerByID,
@@ -62,10 +61,8 @@ router.delete('/deleteTable/:id', deleteTablesControllerByID)
 
 //groups router
 router.post('/createGroup', writeGroupsController)
-router.get('/groups', readGroupsController)
 router.get('/groups/:id', readGroupsControllerByID)
 router.put('/sitGroup/:id',sitGroupByIDController)
-router.put('/sitGroups', sitGroupsController)
 router.put('/updateGroup/:id', updateGroupsController)
 router.put('/beyondPayment/:id', beyondPaymentController)
 router.delete('/deleteGroup/:id', deleteGroupsControllerByID)
