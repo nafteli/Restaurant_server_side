@@ -19,7 +19,6 @@ db.connect(err => {
     console.log("Connected from Group");
 });
 
-
 export const createGroup = async (data, res) => {
     if (!Object.hasOwn(data, "name") || !Object.hasOwn(data, "size")) {
         console.log(`The information received is incorrect ${JSON.stringify(data)}`)
@@ -72,9 +71,9 @@ export const deleteGroupByID = async (res, id) => {
 }
 
 
-export const updateGroup = async(res, id, data) => {
+export const updateGroup = async (res, id, data) => {
     let checkGroup = await readFromSql(`SELECT * FROM queue WHERE id = ${id}`)
-    let getMenuToCheckDishes = await readFromSql( `SELECT * FROM menu`)
+    let getMenuToCheckDishes = await readFromSql(`SELECT * FROM menu`)
     console.log(checkGroup, getMenuToCheckDishes)
     db.query(checkGroup, (err, resultCheckGroup) => {
         if (err) throw err
@@ -169,45 +168,38 @@ export const beyondPayment = (req, res) => {
     })
 }
 
-export const sitGroupByID = (res, id) => {
+export const sitGroupByID = async (res, id) => {
     let queueData;
     let tableData;
-    db.query(`SELECT * FROM queue WHERE id = ${id}`, (err, resultQueue) => {
-        if (err) throw err
-        if (resultQueue.length === 0) {
-            console.log(`There is no group with the id: ${id}`)
-            res.status(400).send(`There is no group with the id: ${id}`)
-            return;
-        }
-        queueData = resultQueue[0]
-        if (queueData["gropeTable"] != null || queueData["gropeTable"] != undefined) {
-            console.log(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
-            res.status(400).send(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
-            return
-        }
-        db.query(`SELECT * FROM tables WHERE capacity = ${queueData["size"] || demoSize} AND GroupSeqNum = 0`, (err, resultTables) => {
-            if (err) throw err
-            tableData = resultTables[0]
-            if (!tableData) {
-                console.log(`There are no available tables for a group size: ${queueData["size"]}`)
-                return res.status(400).send(`There are no available tables for a group size: ${queueData["size"]}`)
-            }
-            let tableDataId = tableData["id"]
-            let tableUpdate = `UPDATE tables SET GroupSeqNum = '${queueData["GroupSeqNo"] || null}' WHERE id = '${tableDataId}'`
-            let queueUpdate = `UPDATE queue SET queue = "AwaitService" , gropeTable = '${tableData["name"] || null}' WHERE id = ${id}`
-            db.query(tableUpdate, (err, result) => {
-                if (err) throw err
-                console.log(`the table ${tableData["name"]} Caught by ${queueData["name"]}`)
-                db.query(queueUpdate, (err, result) => {
-                    console.log(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
-                    if (err) throw err
-                    res.status(200).send(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
-                    return
-                })
-            })
-        })
-    });
-
+    const checkId = await idCheck(id, 'queue')
+    if (checkId) {
+        console.log(checkId)
+        return res.status(400).send(checkId)
+    }
+    let getGroup = `SELECT * FROM queue WHERE id = ${id}`
+    const getGroupToSit = await readFromSql(getGroup)
+    queueData = getGroupToSit[0]
+    if (queueData["gropeTable"] != null || queueData["gropeTable"] != undefined) {
+        console.log(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
+        res.status(400).send(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
+        return
+    }
+    let getTable = `SELECT * FROM tables WHERE capacity = ${queueData["size"] || demoSize} AND GroupSeqNum = 0`
+    const getTablesSeats = await readFromSql(getTable)
+    tableData = getTablesSeats[0]
+    if (!tableData) {
+        console.log(`There are no available tables for a group size: ${queueData["size"]}`)
+        return res.status(400).send(`There are no available tables for a group size: ${queueData["size"]}`)
+    }
+    let tableDataId = tableData["id"]
+    let tableUpdate = `UPDATE tables SET GroupSeqNum = '${queueData["GroupSeqNo"] || null}' WHERE id = '${tableDataId}'`
+    let queueUpdate = `UPDATE queue SET queue = "AwaitService" , gropeTable = '${tableData["name"] || null}' WHERE id = ${id}`
+    const updateTable = await readFromSql(tableUpdate)
+    const updateQueue = await readFromSql(queueUpdate)
+    if(!updateTable || !updateQueue) return res.send('Something is wrong')
+    console.log(`the table ${tableData["name"]} Caught by ${queueData["name"]}`)
+    console.log(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
+    return res.status(200).send(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
 }
 
 export const updateSql = (groupID, groupName, tableID, tableName) => {

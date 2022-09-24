@@ -13,7 +13,7 @@ db.connect(err => {
 });
 
 export const idCheck = (id, table) => {
-    if (typeof id != Number) return(`URL ERROR`)
+    //if (typeof id != Number || id != 'string') return(`URL ERROR`)
     let checkIdSql = `SELECT * FROM ${table} WHERE id = ${id}`
     return new Promise((resolve, reject) => {
         db.query(checkIdSql, (error, resultCheckGroup) => {
