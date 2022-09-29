@@ -59,8 +59,9 @@ export const deleteGroupByID = async (res, id) => {
     let sql = await readFromSql(`SELECT * FROM queue WHERE id = '${id}'`)
     let groupToDelete = sql[0]
     if (groupToDelete["dishes"] == '{"0":0}' && groupToDelete["queue"] == "AwaitBill" || groupToDelete["dishes"] == null && groupToDelete["queue"] == "AwaitSit") {
-        let groupToDelete = await readFromSql(`DELETE FROM queue WHERE id = '${id}'`)
+        let deletedGroup = await readFromSql(`DELETE FROM queue WHERE id = '${id}'`)
         let tableToUPdate = await readFromSql(`UPDATE tables SET GroupSeqNum = 0 WHERE GroupSeqNum = '${groupToDelete["GroupSeqNo"]}'`)
+        if(!tableToUPdate || !deletedGroup) return res.status(403).send('Something is wrong')
         console.log(`the group ${sql[0]["name"]} is deleted`);
         return res.send(`the group ${sql[0]["name"]} is deleted`)
     }
@@ -72,117 +73,92 @@ export const deleteGroupByID = async (res, id) => {
 
 
 export const updateGroup = async (res, id, data) => {
+    const checkID = await idCheck(id, 'queue')
+    if (checkID) return res.status(403).send(`${checkID}`)
     let checkGroup = await readFromSql(`SELECT * FROM queue WHERE id = ${id}`)
     let getMenuToCheckDishes = await readFromSql(`SELECT * FROM menu`)
-    console.log(checkGroup, getMenuToCheckDishes)
-    db.query(checkGroup, (err, resultCheckGroup) => {
-        if (err) throw err
-        //id check
-        if (resultCheckGroup.length === 0) {
-            console.log(`There is no group with the id: ${id}`)
-            res.status(400).send(`There is no group with the id: ${id}`)
+    let groupToUpdate = checkGroup[0]
+    //status group check
+    if (groupToUpdate["queue"] != "AwaitService") {
+        console.log(`It is not possible to order because you are currently in ${groupToUpdate["queue"]}`)
+        res.status(403).send(`It is not possible to order because you are currently in ${groupToUpdate["queue"]}`)
+        return;
+    }
+
+
+    // //Checking information coming from the client
+    let totalPrice = 0
+    for (let [key, value] of Object.entries(data.dishes)) {
+        if (key > getMenuToCheckDishes.length) {
+            console.log(`Dish ${key} does not exist`)
+            res.status(403).send(`Dish ${key} does not exist`)
             return;
         }
-        let groupToUpdate = resultCheckGroup[0]
-        //status group check
-        if (groupToUpdate["queue"] != "AwaitService") {
-            console.log(`It is not possible to order because you are currently in ${groupToUpdate["queue"]}`)
-            res.status(403).send(`It is not possible to order because you are currently in ${groupToUpdate["queue"]}`)
+        if (typeof value != "number") {
+            console.log(`Non-numeric values cannot be updated ${value} is not number it ${typeof value}`)
+            res.status(403).send(`Non-numeric values cannot be updated ${value} is not number it ${typeof value}`)
             return;
         }
+        if (value < 0) {
+            console.log(value, "< 0")
+            res.status(403).send(`It is not possible to update minus portions`)
+            return;
+        }
+        if (value % 1 !== 0) {
+            console.log(value, "Incomplete numbers cannot be updated")
+            res.status(403).send("Incomplete numbers cannot be updated")
+            return;
+        }
+        totalPrice = totalPrice + getMenuToCheckDishes[key]["price"] * value
+    }
 
-        //Checking information coming from the client
-        let totalPrice = 0
-        db.query(getMenuToCheckDishes, (err, menuResult) => {
-            if (err) return err
-            for (let [key, value] of Object.entries(data.dishes)) {
-                if (key > menuResult.length) {
-                    console.log(`Dish ${key} does not exist`)
-                    res.status(403).send(`Dish ${key} does not exist`)
-                    return;
-                }
-                if (typeof value != "number") {
-                    console.log(`Non-numeric values cannot be updated ${value} is not number it ${typeof value}`)
-                    res.status(403).send(`Non-numeric values cannot be updated ${value} is not number it ${typeof value}`)
-                    return;
-                }
-                if (value < 0) {
-                    console.log(value, "< 0")
-                    res.status(403).send(`It is not possible to update minus portions`)
-                    return;
-                }
-                if (value % 1 !== 0) {
-                    console.log(value, "Incomplete numbers cannot be updated")
-                    res.status(403).send("Incomplete numbers cannot be updated")
-                    return;
-                }
-                totalPrice = totalPrice + menuResult[key]["price"] * value
-            }
-
-            //check Equality between object
-            if (groupToUpdate["dishes"] != null) {
-                const json = JSON.parse(groupToUpdate["dishes"])
-                const assign = Object.assign({}, json, data.dishes)
-                totalPrice = 0
-                for (let [key, value] of Object.entries(assign)) {
-                    totalPrice = totalPrice + menuResult[key]["price"] * value
-                    if (json[key] > assign[key]) {
-                        console.log(`An existing order cannot be reduced\n ${json[key]} > ${assign[key]}`)
-                        res.status(403).send(`An existing order cannot be reduced`)
-                        return
-                    }
-                }
-            }
-            let dataToUpdate = `UPDATE queue SET dishes = '${JSON.stringify(data.dishes) || groupToUpdate["dishes"]}', price = ${totalPrice} WHERE id = '${id}'`;
-            db.query(dataToUpdate, (err, resultUpdating) => {
-                if (err) throw err;
-                console.log(`${groupToUpdate["name"]}'s invitation was successfully received, payable by now: ${totalPrice}`)
-                res.send(`${groupToUpdate["name"]}'s invitation was successfully received, payable by now: ${totalPrice}`)
+    //     //check Equality between object
+    if (groupToUpdate["dishes"] != null) {
+        const json = JSON.parse(groupToUpdate["dishes"])
+        const assign = Object.assign({}, json, data.dishes)
+        totalPrice = 0
+        for (let [key, value] of Object.entries(assign)) {
+            totalPrice = totalPrice + getMenuToCheckDishes[key]["price"] * value
+            if (json[key] > assign[key]) {
+                console.log(`An existing order cannot be reduced\n ${json[key]} > ${assign[key]}`)
+                res.status(403).send(`An existing order cannot be reduced`)
                 return
-            });
-        })
-    })
-}
-
-
-export const beyondPayment = (req, res) => {
-    let id = req.params.id
-    let totalPay = `SELECT * FROM queue WHERE id = ${id}`
-    db.query(totalPay, (err, resultTotalPay) => {
-        if (err) throw err
-        if (resultTotalPay.length === 0) {
-            console.log(`There is no group with the id: ${id}`)
-            res.status(400).send(`There is no group with the id: ${id}`)
-            return;
+            }
         }
-        let dataToUpdate = `UPDATE queue SET dishes = '{"0":0}', queue = "AwaitBill" WHERE id = '${id}'`
-        db.query(totalPay, (err, peyResult) => {
-            if (err) throw err
-            db.query(dataToUpdate, (err, result) => {
-                if (err) throw err;
-                console.log(`total payment for group ${resultTotalPay[0]["name"]} is: ${peyResult[0]["price"]}`)
-                res.send(`total payment for group ${resultTotalPay[0]["name"]} is: ${peyResult[0]["price"]}`)
-                return;
-            });
-        })
-    })
+    }
+    let dataToUpdate = `UPDATE queue SET dishes = '${JSON.stringify(data.dishes) || groupToUpdate["dishes"]}', price = ${totalPrice} WHERE id = '${id}'`;
+    let updateGroup = await readFromSql(dataToUpdate)
+    if (!updateGroup) return res.send('Something is wrong')
+    console.log(`${groupToUpdate["name"]}'s invitation was successfully received, payable by now: ${totalPrice}`)
+    return res.send(`${groupToUpdate["name"]}'s invitation was successfully received, payable by now: ${totalPrice}`)
+
 }
 
-export const sitGroupByID = async (res, id) => {
+
+export const beyondPayment = async (req, res) => {
+    let id = req.params.id
+    const checkID = await idCheck(id, 'queue')
+    if (checkID) return res.status(403).send(`${checkID}`)
+    let totalPay = `SELECT * FROM queue WHERE id = ${id}`
+    let dataToUpdate = `UPDATE queue SET dishes = '{"0":0}', queue = "AwaitBill" WHERE id = '${id}'`
+    let toPay = await readFromSql(totalPay)
+    let update = await readFromSql(dataToUpdate)
+    console.log(update)
+    console.log(`total payment for group ${toPay[0]["name"]} is: ${toPay[0]["price"]}`)
+    return res.send(`total payment for group ${toPay[0]["name"]} is: ${toPay[0]["price"]}`)
+}
+
+export const sitGroupByID = async (res, id, demoSize) => {
     let queueData;
     let tableData;
     const checkId = await idCheck(id, 'queue')
-    if (checkId) {
-        console.log(checkId)
-        return res.status(400).send(checkId)
-    }
+    if (checkId) return res.status(400).send(checkId)
     let getGroup = `SELECT * FROM queue WHERE id = ${id}`
     const getGroupToSit = await readFromSql(getGroup)
     queueData = getGroupToSit[0]
     if (queueData["gropeTable"] != null || queueData["gropeTable"] != undefined) {
         console.log(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
-        res.status(400).send(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
-        return
+        return res.status(400).send(`${queueData["name"]} is already sitting at the table: ${queueData["gropeTable"]}`)
     }
     let getTable = `SELECT * FROM tables WHERE capacity = ${queueData["size"] || demoSize} AND GroupSeqNum = 0`
     const getTablesSeats = await readFromSql(getTable)
@@ -196,119 +172,39 @@ export const sitGroupByID = async (res, id) => {
     let queueUpdate = `UPDATE queue SET queue = "AwaitService" , gropeTable = '${tableData["name"] || null}' WHERE id = ${id}`
     const updateTable = await readFromSql(tableUpdate)
     const updateQueue = await readFromSql(queueUpdate)
-    if(!updateTable || !updateQueue) return res.send('Something is wrong')
+    if (!updateTable || !updateQueue) return res.send('Something is wrong')
     console.log(`the table ${tableData["name"]} Caught by ${queueData["name"]}`)
     console.log(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
     return res.status(200).send(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
 }
 
-export const updateSql = (groupID, groupName, tableID, tableName) => {
-    console.log(tableID, tableName, groupID, groupName)
-    let queue = `SELECT * FROM queue WHERE id = ${groupID}`
-    let tables = `SELECT * FROM tables WHERE id = ${tableID}`
-    // let tableUpdate = `UPDATE tables 
-    //     SET GroupSeqNum = '${groupName || 0}' 
-    //     WHERE id = '${tableID}' 
-    //     AND GroupSeqNum = 0`
-    // let queueUpdate = `UPDATE queue 
-    //     SET queue = "AwaitService" , gropeTable = '${tableName || null}' 
-    //     WHERE id = ${groupID} 
-    //     AND gropeTable IS NULL`
-    db.query(queue, (err, resultQueue) => {
-        if (err) throw err
-        if (resultQueue[0]["queue"] === "AwaitSit" && resultQueue[0]["gropeTable"] === null) {
-            console.log(resultQueue[0]["queue"], '=== "AwaitSit" &&', resultQueue[0]["gropeTable"], '=== null')
-            db.query(tables, (err, resultTables) => {
-                if (err) throw err
-                if (resultTables[0]["GroupSeqNum"] === 0) {
-                    console.log(resultTables[0]["GroupSeqNum"], '=== 0')
-                    // db.query(tableUpdate, (err, result) => {
-                    //     if (err) throw err
-                    //     console.log(`the table ${tableName} Caught by ${groupName}`)
-                    //     db.query(queueUpdate, (err, result) => {
-                    //         console.log(`the group ${groupName} sitting in table ${tableName}`)
-                    //         if (err) throw err
-                    //         //res.status(200).send(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
-                    //         return
-                    //     })
-                    // })
-                }
-                else {
-                    console.log("in else", resultTables[0]["GroupSeqNum"])
-                }
-            })
-        }
-    })
-}
 
 export const sitGroups = async (req, res) => {
-    let data;
-    let objQueue = {}
-    const queueData = await queueToSitGroups(req, res, data, objQueue)
-    console.log("queueData:", queueData)
-    //     let objTables = {}
-    //     let queue = `SELECT * FROM queue WHERE queue = "AwaitSit" ORDER BY size DESC, GroupSeqNo ASC`
-    //     db.query(queue, (err, resultQueue) => {
-    //         // console.log(resultQueue)
-    //         for (let [queueKey, queueValue] of Object.entries(resultQueue)) {
-    //             // queueData = queueValue
-    //             let tables = `SELECT * FROM tables WHERE GroupSeqNum = 0 ORDER BY capacity ASC`
-    //             db.query(tables, (err, resultTables) => {
-    //                 // console.log(resultTables)
-    //                 for (let [tablesKey, tablesValue] of Object.entries(resultTables)) {
-    //                     // tableData = tablesValue
-    //                     if (tablesValue["capacity"] >= queueValue["size"]) {
-    //                         console.log(`${tablesValue["capacity"]} >= ${queueValue["size"]}`)
-    //                         objQueue[`${queueValue["id"]}`] = queueValue["GroupSeqNo"]
-    //                         objTables[`${tablesValue["id"]}`] = tablesValue["name"]
-    //                         // console.log(objQueue, objTables)
-    //                         updateSql(queueValue["id"], queueValue["GroupSeqNo"], tablesValue["id"], tablesValue["name"])
-    //                         return
-    //                         // console.log("tablesValue:",tablesValue,'queueValue:', queueValue, )
-    //                         //tableID, tableName, groupID, groupName
-    //                         // console.log("resultTables[tablesKey]:",resultTables[tablesKey], "resultQueue[queueKey]:",resultQueue[queueKey])
-    //                         // let tableDataId = tablesValue["id"]
-    //                         // let queueDataId = queueValue["id"]
-    //                         // let tableUpdate = `UPDATE tables SET GroupSeqNum = '${queueValue["GroupSeqNo"] || 0}' WHERE id = '${tableDataId}' AND GroupSeqNum = 0`
-    //                         // let queueUpdate = `UPDATE queue SET queue = "AwaitService" , gropeTable = '${tablesValue["name"] || null}' WHERE id = ${queueDataId} AND gropeTable IS NULL`
-    //                         // db.query(tableUpdate, (err, result) => {
-    //                         //     if (err) throw err
-    //                         //     // console.log(`the table ${tableData["name"]} Caught by ${queueData["name"]}`)
-    //                         //     db.query(queueUpdate, (err, result) => {
-    //                         //         //console.log(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
-    //                         //         if (err) throw err
-    //                         //         // sitGroups(req, res)
-    //                         //         //res.status(200).send(`the group ${queueData["name"]} sitting in table ${tableData["name"]}`)
-    //                         //     })
-    //                         // })
-    //                         // break
-    //                     }
-    //                     console.log("tablesKey:", tablesKey)
-    //                 }
-    //             })
-    //             console.log("queueKey:", queueKey)
-    //         }
-    //     })
-    res.sendStatus(200)
-}
-
-export const queueToSitGroups = (req, res, data, objQueue) => {
-    let queue = `SELECT * FROM queue WHERE queue = "AwaitSit" ORDER BY size DESC, GroupSeqNo ASC`
-    return new Promise((resolve, reject) => {
-        db.query(queue, (err, resultQueueToUpdate) => {
-            if (err) {
-                return reject(err)
+    let objectToSend = {}
+    let groupsSql = `SELECT * FROM queue WHERE queue = "AwaitSit" ORDER BY size DESC, GroupSeqNo ASC`
+    let tablesSql = `SELECT * FROM tables WHERE GroupSeqNum = 0 ORDER BY capacity ASC`
+    let groups = await readFromSql(groupsSql)
+    let tables = await readFromSql(tablesSql)
+    for (let [groupKey, groupValue] of Object.entries(groups)) {
+        for (let [tableKey, tableValue] of Object.entries(tables)) {
+            // console.log(groupValue['size'], tableValue['capacity'])
+            if (tableValue['capacity'] >= groupValue['size']) console.log(true)
+            let groupToSit = await readFromSql(`SELECT * FROM queue WHERE id = ${groupValue['id']}`)
+            let tableToSit = await readFromSql(`SELECT * FROM tables WHERE id = ${tableValue['id']}`)
+            if (groupToSit[0]['gropeTable'] == null && tableToSit[0]['GroupSeqNum'] == 0) {
+                let tableUpdate = `UPDATE tables SET GroupSeqNum = '${groupToSit[0]['GroupSeqNo'] || null}' WHERE id = '${tableToSit[0]['id']}'`
+                let queueUpdate = `UPDATE queue SET queue = "AwaitService" , gropeTable = '${tableToSit[0]['name'] || null}' WHERE id = ${groupToSit[0]['id']}`
+                const updateTable = await readFromSql(tableUpdate)
+                const updateQueue = await readFromSql(queueUpdate)
+                if (!updateTable || !updateQueue) return res.send('Something is wrong')
+                objectToSend[`${tableToSit[0]['name']}`] = `the table ${tableToSit[0]['name']} Caught by ${groupToSit[0]["name"]}`
+                objectToSend[`${groupToSit[0]["name"]}`] = `the group ${groupToSit[0]["name"]} sitting in table ${tableToSit[0]['name']}`
+                console.log(`the table ${tableToSit[0]['name']} Caught by ${groupToSit[0]["name"]}`)
+                console.log(`the group ${groupToSit[0]["name"]} sitting in table ${tableToSit[0]['name']}`)
             }
-            return resolve(resultQueueToUpdate)
-            // console.log(resultQueueToUpdate)
-            // data = resultQueueToUpdate
-            // // console.log(data)
-            // for (let [queueKey, queueValue] of Object.entries(resultQueueToUpdate)) {
-            //     objQueue[`${queueValue["id"]}`] = queueValue
-            //     console.log("objQueue:", objQueue)
-            //     return queueValue
-            // }
-        })
-    })
+        }
+    }
+    // console.log("groups:", groups, '\n')
+    console.log(objectToSend)
+    return res.send(objectToSend)
 }
-

@@ -62,6 +62,7 @@ router.delete('/deleteTable/:id', deleteTablesControllerByID)
 //groups router
 router.post('/createGroup', writeGroupsController)
 router.get('/groups/:id', readGroupsControllerByID)
+router.put('/sitGroups', sitGroupsController)
 router.put('/sitGroup/:id',sitGroupByIDController)
 router.put('/updateGroup/:id', updateGroupsController)
 router.put('/beyondPayment/:id', beyondPaymentController)
