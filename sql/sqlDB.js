@@ -33,7 +33,7 @@ export const createTable = (req, res) => {
      (id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255), size INT, queue VARCHAR(255),GroupSeqNo BIGINT, 
         arrivalTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP, gropeTable VARCHAR(255),
-        dishs VARCHAR(255))`
+        dishes VARCHAR(255))`
     db.query(sql, (err, result) => {
         if (err) throw err
         console.log(`Table ${tableName} created`)

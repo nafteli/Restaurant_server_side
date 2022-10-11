@@ -1,12 +1,11 @@
 import { createTable, readTable, readTableByID, deleteTableByID, updateTable } from './tables.js'
 
 export const writeTablesController = (req, res) => {
-    const data = req.body;
-    console.log(data)
+    const data = req.body
     try {
         createTable( data, res)
     } catch (error) {
-        console.error(error);
+        console.error(error)
         res.sendStatus(500)
 
     }
@@ -24,8 +23,6 @@ export const readTablesController = (req, res) => {
 
 export const readTablesControllerByID = (req, res) => {
     let id = req.params.id
-    console.log(id==Number)
-    console.log(typeof id)
     try {
         readTableByID(res ,id)
     } catch (error) {

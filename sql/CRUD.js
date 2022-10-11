@@ -13,7 +13,7 @@ db.connect(err => {
 });
 
 export const idCheck = (id, table) => {
-    //if (typeof id != Number || id != 'string') return(`URL ERROR`)
+    if(!Number.isInteger(Number(id))) return(`URL ERROR`)
     let checkIdSql = `SELECT * FROM ${table} WHERE id = ${id}`
     return new Promise((resolve, reject) => {
         db.query(checkIdSql, (error, resultCheckGroup) => {
@@ -27,8 +27,7 @@ export const idCheck = (id, table) => {
 }
 
 
-export const readFromSql = (sql) => {
-    console.log(sql)
+export const SQL = (sql) => {
     return new Promise((resolveRead, reject) => {
         db.query(sql, (error, resultRead) => {
             if (error) reject(error)

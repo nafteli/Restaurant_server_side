@@ -28,12 +28,11 @@ db.connect(err => {
 
 export const createMenuTable = (req, res) => {
     const { tableName } = req.params
-    console.log(tableName)
     let sql = `CREATE TABLE ${tableName}
      (id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255), size INT, queue VARCHAR(255),GroupSeqNo BIGINT, 
         arrivalTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP, gropeTable VARCHAR(255),
-        dishs VARCHAR(255))`
+        dishes VARCHAR(255))`
     db.query(sql, (err, result) => {
         if (err) throw err
         console.log(`Table ${tableName} created`)
@@ -41,8 +40,8 @@ export const createMenuTable = (req, res) => {
     });
 }
 
-export const writeMenuDb = ( data, res) => {
-    let sql = `INSERT INTO menu (category, name, price) VALUES ('${data.category}', '${data.name}', ${data.price})`;
+export const writeMenuDb = (data, res) => {
+    let sql = `INSERT INTO menu (category, name, price) VALUES ('${data.category}', "${data.name}", ${data.price})`;
     db.query(sql, (err, result) => {
         if (err) throw err;
         console.log("record inserted", data);
@@ -53,15 +52,13 @@ export const writeMenuDb = ( data, res) => {
 export const menu = (res, id) => {
     db.query(`SELECT * FROM menu`, (err, result) => {
         if (err) throw err;
-        console.log(result);
         return res.send(result)
     });
 }
 
 export const MenuByID = (res, id) => {
         db.query(`SELECT * FROM menu where id = '${id}'`, (err, result) => {
-            if (err) throw err;
-            console.log(result);
+            if (err) throw err
             return res.send(result)
         });
     }
@@ -69,16 +66,14 @@ export const MenuByID = (res, id) => {
 
 export const MenuByCategory = (res, category) => {
     db.query(`SELECT * FROM menu where category = '${category}'`, (err, result) => {
-        if (err) throw err;
-        console.log(result);
+        if (err) throw err
         return res.send(result)
     });
 }
 
 export const deleteMenuByID = (res, id) => {
     db.query(`DELETE FROM menu where id = '${id}'`, (err, result) => {
-        if (err) throw err;
-        console.log(result);
+        if (err) throw err
         return res.send(result)
     });
 }

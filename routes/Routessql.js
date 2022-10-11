@@ -47,26 +47,26 @@ router.get('/createTable/:tableName', createTable)
 //menu router
 router.get('/menu', menuController)
 router.get('/menu/:category', menuByCategoryController)
-router.post('/createDish', writeMenuController)
+router.post(['/createDish', '/menu'], writeMenuController)
 router.delete('/menu/:id', deleteMenuByIDController)
 
 
 //tables router
 router.get('/tables', readTablesController)
 router.get('/tables/:id', readTablesControllerByID)
-router.post('/createTable', writeTablesController)
+router.post(['/createTable', '/tables'], writeTablesController)
 router.put('/updateTable/:id', updateTablesController)
 router.delete('/deleteTable/:id', deleteTablesControllerByID)
 
 
 //groups router
-router.post('/createGroup', writeGroupsController)
-router.get('/groups/:id', readGroupsControllerByID)
+router.post(['/createGroup', '/diners'], writeGroupsController)
+router.get(['/groups/:id', '/diners/:id', '/diners', '/groups'], readGroupsControllerByID)
 router.put('/sitGroups', sitGroupsController)
 router.put('/sitGroup/:id',sitGroupByIDController)
 router.put('/updateGroup/:id', updateGroupsController)
 router.put('/beyondPayment/:id', beyondPaymentController)
-router.delete('/deleteGroup/:id', deleteGroupsControllerByID)
+router.delete(['/deleteGroup/:id', '/diners/:id'], deleteGroupsControllerByID)
 
 
 export default router 
